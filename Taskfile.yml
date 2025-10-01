@@ -1,0 +1,25 @@
+# https://taskfile.dev
+
+version: "3"
+
+tasks:
+  uv:
+    cmds:
+      - uv sync
+
+  lint:
+    cmds:
+      - uv run black --check .
+      - uv run ruff check
+
+  scheduler:
+    dir: app
+    cmds:
+      -  # TODO run redis
+      - uv run fastapi dev scheduler.py
+
+  test:
+    dir: app
+    cmds:
+      - task: lint
+      - uv run pytest -s --pdb
