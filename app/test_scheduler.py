@@ -83,6 +83,27 @@ def test_housekeeping_parameters_cannot_be_set_on_job_creation():
     assert job["completed_at"] is None
 
 
+def test_fetching_a_job_by_id():
+    job_data = {
+        "image": uuid4().hex,
+        "command": ["python"],
+        "arguments": ["-c", "print('Hello, World!')"],
+        "gpu_type": "NVIDIA",
+        "memory_requested": 1,
+        "cpu_cores_requested": 2,
+    }
+    response = client.post("/jobs", json=job_data)
+    assert response.status_code == 200
+    job_id = response.json()["id"]
+
+    # now get the job back out by ID and confirm
+    get_response = client.get(f"/jobs/{job_id}")
+    assert get_response.status_code == 200
+    job = get_response.json()
+    assert job["id"] == job_id
+    assert job["image"] == job_data["image"]
+
+
 def test_health_check():
     response = client.get("/health")
     assert response.status_code == 200

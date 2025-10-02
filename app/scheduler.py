@@ -35,11 +35,11 @@ def submit_job(job_create: JobCreate) -> Dict:
 
 
 @app.get("/jobs/{job_id}")
-def get_job(job_id) -> Dict:
+def get_job(job_id) -> Job:
     # TODO: pull the job based on the given ID from redis
     # TODO: altho using redis as a repoistory of jobs is not the best option. maybe keep just IDs in redis
     # but the rest of the job information in something more persistent like sqlite
-    return HTTPException(status_code=501, detail="Not implemented yet")
+    return Job.load(job_id)
 
 
 @app.get("/jobs")
