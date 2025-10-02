@@ -1,9 +1,3 @@
-# this is a fast api service with 4 http endpoints:
-# 1. a POST endpoint to submit a json job definition
-# 2. a GET endpoint to get a job definition based on a job id submitted as a path parameter
-# 3. a GET endpoint that returns a json list of all job ids
-# 4. a DELETE endpoint to abort a job that receives a job id based as a path parameter
-
 from typing import List, Dict
 from fastapi import FastAPI, HTTPException
 
@@ -12,11 +6,26 @@ from models import Job
 app = FastAPI()
 
 
+@app.on_event("startup")
+async def startup_event():
+    print("🚀 App is starting up...")
+    print(f"✅ Connected to Redis {app.redis_client.info()["redis_version"]}")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    print("🛑 App is shutting down...")
+    # TODO: if i wanted to make a proper persistence layer and not redis messiness, this is where we could clean up
+
+
 @app.post("/jobs")
 def submit_job(job: Job) -> Dict:
     """If the job fails to validate, fastapi will raise a 422 error automatically."""
-    # TODO: persist to redis
-    return {"id": job.id}
+    # TODO: if persistence fails to redis what do?
+    if job.save():
+        return {"id": job.id}
+
+    return HTTPException(status_code=500, detail="Failed to save job")
 
 
 @app.get("/jobs/{job_id}")
@@ -27,12 +36,17 @@ def get_job(job_id) -> Dict:
     return HTTPException(status_code=501, detail="Not implemented yet")
 
 
-@app.get("/")
-def list_jobs() -> List[Dict]:
+@app.get("/jobs")
+def list_jobs() -> List[Job]:
     """List existing jobs in redis"""
-    # TODO: pull job IDs from redis and return.
-    # TODO: should we return just IDs or hydrate the job object fully? more load on redis
-    return HTTPException(status_code=501, detail="Not implemented yet")
+    # seems redundant to deserialize into pydantic models and then reserialize
+    # and inefficient for our purposes here its a good trick to make sure
+    # we are serializing correctly
+    # this is the first thing to go in a performance impl
+    serialized = app.redis_client.hgetall("jobs")
+    jobs = [Job.model_validate_json(v) for v in serialized.values()]
+
+    return jobs
 
 
 @app.delete("/jobs/{job_id}")
