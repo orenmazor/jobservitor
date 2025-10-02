@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 from scheduler import app
 import pytest
 from uuid import uuid4
+from models import redis_client
 
 client = TestClient(app)
 
@@ -11,7 +12,6 @@ client = TestClient(app)
 def run_around_tests():
     # Code that will run before your test, e.g. setting up a test database
     yield  # This is where the testing happens
-    redis_client = app.redis_client
     redis_client.flushdb()  # Clear the Redis database after each test
 
 

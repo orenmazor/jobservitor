@@ -4,20 +4,27 @@ from uuid import uuid4
 import redis
 from os import environ
 
-from pydantic import BaseModel, PrivateAttr
+from pydantic import BaseModel
 
 redis_client = redis.from_url(
     environ.get("REDIS_URI", "redis://localhost:6379/0"), decode_responses=True
 )
 
 
-# TODO: runtime is in redis but it would be dope to have a persistent layer in sqlite or something like that
-class Job(BaseModel):
-    # job runtime stuff
-    # could be a separate object but why? we'll never see
-    # jobs sharing definitions. probably?
-    # either way, no optionals here
-    # explicit is better than implicit
+class JobCreate(BaseModel):
+    """
+    Separate the job creation model from the runtime model.
+    This is a cleaner way to make sure users can't modify the housekeeping
+    fields like id/status/timestamps.
+
+    The alternatives, while still using pydantic, could be a pre-save hook
+    that validates that the user is not trying to set these fields.
+    but that's less readable I think?
+    It also might make serialization/deserialization less readable,
+    at which point I'd need to not use pydantic and go with a heavier
+    tool before I needed to..
+    """
+
     image: str
     command: List[str]
     arguments: List[str]
@@ -25,61 +32,27 @@ class Job(BaseModel):
     memory_requested: int = 1  # in GB
     cpu_cores_requested: int = 1
 
+
+class Job(BaseModel):
     # job housekeeping stuff
-    # forbid accepting
-    _id: str = PrivateAttr(default_factory=lambda: str(uuid4()))
-    _status: str = PrivateAttr(default="pending")
-    _submitted_at: datetime = PrivateAttr(default_factory=datetime.now)
-    _aborted_at: Optional[datetime] = PrivateAttr()
-    _completed_at: Optional[datetime] = PrivateAttr()
-
-    @property
-    def id(self) -> str:
-        return self._id
-
-    @property
-    def status(self) -> str:
-        return self._status
-
-    @property
-    def submitted_at(self) -> datetime:
-        return self._submitted_at
-
-    @property
-    def aborted_at(self) -> Optional[datetime]:
-        return self._aborted_at
-
-    @property
-    def completed_at(self) -> Optional[datetime]:
-        return self._completed_at
-
-    def dict(self, *args, **kwargs):
-        """Override dict to include private attributes"""
-        base = super().dict(*args, **kwargs)
-        base.update(
-            {
-                "id": self.id,
-                "status": self.status,
-                "submitted_at": self.submitted_at,
-                "aborted_at": self.aborted_at,
-                "completed_at": self.completed_at,
-            }
-        )
-        return base
+    id: str = str(uuid4())
+    status: str = "pending"
+    submitted_at: datetime = datetime.now()
+    aborted_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
 
     def save(self):
-        """pydantic isn't really an ORM but less is more"""
-        redis_client.set("jobservitor:{self.id}", self.model_dump_json())
+        """
+        pydantic isn't really an ORM but less is more.
+        This persists the entire job object to redis so we can retrieve it later, and avoid
+        saving the entire object in the redis queue.
+        """
+        return redis_client.set(f"jobservitor:{self.id}", self.model_dump_json())
 
-    def find(self):
-        """pydantic isn't really an ORM but less is more"""
-        data = redis_client.get(f"jobservitor:{self.id}")
+    @classmethod
+    def load(cls, job_id):
+        """Dear oren. are you just reinventing ActiveRecord?"""
+        data = redis_client.get(f"jobservitor:{job_id}")
         if data:
             return Job.model_validate_json(data)
         return None
-
-    @classmethod
-    def all(cls, value) -> List["Job"]:
-        """Dear oren. are you just reinventing ActiveRecord?"""
-        # TODO: get queue
-        return []

@@ -1,7 +1,7 @@
 from typing import List, Dict
 from fastapi import FastAPI, HTTPException
 
-from models import Job
+from models import Job, JobCreate
 
 app = FastAPI()
 
@@ -19,13 +19,17 @@ async def shutdown_event():
 
 
 @app.post("/jobs")
-def submit_job(job: Job) -> Dict:
+def submit_job(job_create: JobCreate) -> Dict:
     """If the job fails to validate, fastapi will raise a 422 error automatically."""
+    # using separated Job and JobCreate to protect housekeeping fields
+    job = Job(**job_create.model_dump())
+
     # TODO: if persistence fails to redis what do?
     if job.save():
+        # we saved the job to redis
         return {"id": job.id}
 
-    return HTTPException(status_code=500, detail="Failed to save job")
+    raise HTTPException(status_code=500, detail="Failed to save job")
 
 
 @app.get("/jobs/{job_id}")
@@ -43,10 +47,10 @@ def list_jobs() -> List[Job]:
     # and inefficient for our purposes here its a good trick to make sure
     # we are serializing correctly
     # this is the first thing to go in a performance impl
-    serialized = app.redis_client.hgetall("jobs")
-    jobs = [Job.model_validate_json(v) for v in serialized.values()]
+    # serialized = app.redis_client.hgetall("jobs")
+    # jobs = [Job.model_validate_json(v) for v in serialized.values()]
 
-    return jobs
+    return []
 
 
 @app.delete("/jobs/{job_id}")
