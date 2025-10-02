@@ -50,6 +50,39 @@ def test_submitting_and_getting_job_back():
     assert list_response.json()[0]["image"] == job_data["image"]
 
 
+def test_housekeeping_parameters_cannot_be_set_on_job_creation():
+    job_data = {
+        "image": "python:3.8",
+        "command": ["python"],
+        "arguments": ["-c", "print('Hello, World!')"],
+        "gpu_type": "NVIDIA",
+        "memory_requested": 1,
+        "cpu_cores_requested": 2,
+        # attempting to set housekeeping parameters should be ignored
+        "id": "malicious_id",
+        "status": "succeeded",
+        "submitted_at": "2020-01-01T00:00:00",
+        "aborted_at": "2020-01-01T00:00:00",
+        "completed_at": "2020-01-01T00:00:00",
+    }
+    response = client.post("/jobs", json=job_data)
+    # should we return a 4xx error instead on extra data?
+    assert response.status_code == 200
+    job_id = response.json()["id"]
+    assert job_id != "malicious_id"
+
+    list_response = client.get("/jobs")
+    assert list_response.status_code == 200
+    job = list_response.json()[0]
+
+    # we should see sane defaults here
+    # and not what i submitted above
+    assert job["id"] == job_id
+    assert job["status"] == "pending"
+    assert job["aborted_at"] is None
+    assert job["completed_at"] is None
+
+
 def test_health_check():
     response = client.get("/health")
     assert response.status_code == 200
