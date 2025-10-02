@@ -46,8 +46,6 @@ def test_submitting_and_getting_job_back():
 
     list_response = client.get("/jobs")
     assert list_response.status_code == 200
-    breakpoint()
-
     assert list_response.json()[0]["id"] == job_id
     assert list_response.json()[0]["image"] == job_data["image"]
 

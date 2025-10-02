@@ -22,11 +22,13 @@ async def shutdown_event():
 def submit_job(job_create: JobCreate) -> Dict:
     """If the job fails to validate, fastapi will raise a 422 error automatically."""
     # using separated Job and JobCreate to protect housekeeping fields
-    job = Job(**job_create.model_dump())
+    job = Job.model_validate({**job_create.model_dump()})
 
     # TODO: if persistence fails to redis what do?
     if job.save():
         # we saved the job to redis
+        # toss it into the queue
+        job.enqueue()
         return {"id": job.id}
 
     raise HTTPException(status_code=500, detail="Failed to save job")
@@ -43,14 +45,10 @@ def get_job(job_id) -> Dict:
 @app.get("/jobs")
 def list_jobs() -> List[Job]:
     """List existing jobs in redis"""
-    # seems redundant to deserialize into pydantic models and then reserialize
-    # and inefficient for our purposes here its a good trick to make sure
-    # we are serializing correctly
-    # this is the first thing to go in a performance impl
-    # serialized = app.redis_client.hgetall("jobs")
-    # jobs = [Job.model_validate_json(v) for v in serialized.values()]
-
-    return []
+    # this is going to get expensive
+    # first we do a zrange, and then we do a get for each job in that set
+    # there's a few solutions here, but for this version lets leave this as is
+    return [Job.load(job["job_id"]) for job in Job.all()]
 
 
 @app.delete("/jobs/{job_id}")
