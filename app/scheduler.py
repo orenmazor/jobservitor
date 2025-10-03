@@ -1,7 +1,7 @@
 from typing import List, Dict
 from fastapi import FastAPI, HTTPException
 
-from models import Job, JobCreate
+from models import Job, JobCreate, redis_client
 
 app = FastAPI()
 
@@ -9,7 +9,7 @@ app = FastAPI()
 @app.on_event("startup")
 async def startup_event():
     print("🚀 App is starting up...")
-    print(f"✅ Connected to Redis {app.redis_client.info()["redis_version"]}")
+    print(f"✅ Connected to Redis {redis_client.info()["redis_version"]}")
 
 
 @app.on_event("shutdown")
@@ -45,15 +45,15 @@ def get_job(job_id) -> Job:
 @app.get("/jobs")
 def list_jobs() -> List[Job]:
     """List existing jobs in redis"""
-    # this is going to get expensive
-    # first we do a zrange, and then we do a get for each job in that set
-    # there's a few solutions here, but for this version lets leave this as is
+    # TODO: this relies on queued jobs only. are there jobs that are not queued that will be missed? like finished jobs?
     return [Job.load(job["job_id"]) for job in Job.all()]
 
 
 @app.delete("/jobs/{job_id}")
 def abort_job(job_id) -> bool:
     """Receives a job id and aborts it if the job is in pending/running status"""
+    # TODO: find the job in the queue and delete it from the queue if it's pending
+    # TODO: how to communicate to executor that they need to abort the job? will simply setting the job status to aborted be sufficient for THIS project?
     return HTTPException(status_code=501, detail="Not implemented yet")
 
 
