@@ -13,23 +13,32 @@ idle_time = environ.get("EXECUTOR_IDLE_TIME", 1)
 blocking_time = environ.get("EXECUTOR_BLOCKING_TIME", 5)
 
 
+# TODO: could be rewritten as a generator. for funsies and better readability.
 def handle_one_job(
-    gpu_type: Optional[Literal["NVIDIA", "ATI", "Intel"]] = None,
-    cpu_cores: int = 1,
-    memory_gb: int = 1,
+    gpu_type: Literal["NVIDIA", "ATI", "Intel", "Any"],
+    cpu_cores: int,
+    memory_gb: int,
 ) -> Optional[Job]:
-    queued_work = redis_client.bzpopmin("jobservitor:queue", timeout=blocking_time)
+    # this needs to be abstracted out. this service shouldn't know about redis
+    queued_work = redis_client.bzpopmin(
+        f"jobservitor:queue:{gpu_type}", timeout=blocking_time
+    )
+
     if queued_work is None:
         print("No job found, sleeping...")
         return
 
     job = Job.load(queued_work[1])
+    # TODO: check that the job matches the executor's capabilities
+    # TODO: should i have architecture based queues?
+
+    # TODO: run job somehow
 
     return job
 
 
 def listen_for_work(
-    gpu_type: Optional[Literal["NVIDIA", "ATI", "Intel"]] = None,
+    gpu_type: Literal["NVIDIA", "ATI", "Intel", "Any"] = "Any",
     cpu_cores: int = 1,
     memory_gb: int = 1,
 ):

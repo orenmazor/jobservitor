@@ -11,7 +11,7 @@ client = TestClient(app)
 
 
 def test_no_job_found():
-    assert handle_one_job() is None
+    assert handle_one_job(gpu_type="Any", cpu_cores=1, memory_gb=1) is None
 
 
 def test_job_found():
@@ -27,9 +27,14 @@ def test_job_found():
     assert response.status_code == 200
 
     # queue should have a job
-    assert redis_client.zrange("jobservitor:queue", 0, -1) == [response.json()["id"]]
+    assert redis_client.zrange("jobservitor:queue:NVIDIA", 0, -1) == [
+        response.json()["id"]
+    ]
 
-    assert handle_one_job().id == response.json()["id"]
+    assert (
+        handle_one_job(gpu_type="NVIDIA", cpu_cores=1, memory_gb=2).id
+        == response.json()["id"]
+    )
 
     # queue should be empty now
-    assert redis_client.zrange("jobservitor:queue", 0, -1) == []
+    assert redis_client.zrange("jobservitor:queue:NVIDIA", 0, -1) == []

@@ -8,6 +8,9 @@ JOBservitor
 
 ### Backlog
 
+- [ ] Instead of the queue being by time, maybe it should be by requirements?
+- [ ] Executor should respect job requirements
+- [ ] Executors should register themselves with the scheduler
 - [ ] Executors can receive messages from the schedulers
 - [ ] Examine the LIST command for jobs. it relies on the queues, but may be insufficient.
 - [ ] Replace redis persistence layer with something more fun, that will take load off redis for performance
@@ -26,6 +29,7 @@ JOBservitor
 
 ### Done
 
+- [x] Split the job queue by architecture
 - [x] Executors can pick jobs off their queue
 - [x] Create initial executors
 - [x] Initial fastapi scheduler, uv, test suite

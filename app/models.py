@@ -25,7 +25,8 @@ class JobCreate(BaseModel):
     image: str
     command: List[str]
     arguments: List[str]
-    gpu_type: Optional[Literal["Intel", "NVIDIA", "AMD"]] = None
+
+    gpu_type: Literal["Intel", "NVIDIA", "AMD", "Any"] = "Any"
     memory_requested: int = 1  # in GB
     cpu_cores_requested: int = 1
 
@@ -52,9 +53,19 @@ class Job(JobCreate):
 
         We're going to use a simple sorted set in redis for this for now that uses the submitted_at timestamp
         as the score
+
+        Is it better to have one queue for all jobs, or to have multiple queues sharded based on architecture?
+        One queue is simpler to enqueue and dequeue and manage.... but multiple queues makes it easier for
+        the executors
+
+        And once I start sharding, does it make sense to only shard by architecture or should I also shard by
+        mem/cpu buckets? e.g. 1-5GB, 5-20GB, 20+GB?
         """
+
+        # score by submission timestamp so we can FIFO as much as possible
         score = int(self.submitted_at.timestamp())
-        return redis_client.zadd("jobservitor:queue", {self.id: score})
+
+        return redis_client.zadd(f"jobservitor:queue:{self.gpu_type}", {self.id: score})
 
     @classmethod
     def load(cls, job_id) -> Optional["Job"]:
@@ -69,7 +80,12 @@ class Job(JobCreate):
         """Retrieve all jobs from redis. DEFINITELY just recreating AR now"""
         # TODO: this is a potentially expensive call and will need to be rewritten
         # TODO2: do not rehydrate the IDs here, force the client to do it
-        values = redis_client.zrange("jobservitor:queue", 0, -1, withscores=True)
+        # TODO3: so here we are. sharded the queue and now its kinda ugly. does this method even make sense anymore?
+        values = []
+        for gpu_type in ["Intel", "NVIDIA", "AMD", "Any"]:
+            values += redis_client.zrange(
+                f"jobservitor:queue:{gpu_type}", 0, -1, withscores=True
+            )
 
         # TODO3: is it better to rehydrate here or return these fragments? the problem here
         # is that because we only store fragments of the job definition in the sorted set
