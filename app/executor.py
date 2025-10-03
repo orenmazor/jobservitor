@@ -8,13 +8,20 @@ from persistence import redis_client
 from time import sleep
 from os import environ
 from models import Job
+from datetime import datetime
+from socket import gethostname, gethostbyname
 
 idle_time = environ.get("EXECUTOR_IDLE_TIME", 1)
 blocking_time = environ.get("EXECUTOR_BLOCKING_TIME", 1)
 
+# not the best way to get the IP
+executor_name = (
+    environ.get("EXECUTOR_NAME", "executor-1") + "-" + gethostbyname(gethostname())
+)
+
 
 def _pop_job(
-    gpu_type: Literal["NVIDIA", "ATI", "Intel", "Any"] = "Any"
+    gpu_type: Literal["NVIDIA", "AMD", "Intel", "Any"] = "Any"
 ) -> Optional[Job]:
     # this needs to be abstracted out. this service shouldn't know about redis
     queued_work = redis_client.bzpopmin(
@@ -28,7 +35,7 @@ def _pop_job(
 
 # TODO: could be rewritten as a generator. for funsies and better readability.
 def handle_one_job(
-    gpu_type: Literal["NVIDIA", "ATI", "Intel", "Any"],
+    gpu_type: Literal["NVIDIA", "AMD", "Intel", "Any"],
     cpu_cores: int,
     memory_gb: int,
 ) -> Optional[Job]:
@@ -47,12 +54,22 @@ def handle_one_job(
     # TODO: should i have architecture based queues?
 
     # TODO: run job somehow
+    job.status = "running"
+    job.started_at = datetime.now()
+    job.worker = executor_name
+    job.save()
+
+    # simulate the job running by faking a docker execution?
+
+    job.completed_at = datetime.now()
+    job.status = "succeeded"
+    job.save()
 
     return job
 
 
 def listen_for_work(
-    gpu_type: Literal["NVIDIA", "ATI", "Intel", "Any"] = "Any",
+    gpu_type: Literal["NVIDIA", "AMD", "Intel", "Any"] = "Any",
     cpu_cores: int = 1,
     memory_gb: int = 1,
 ):

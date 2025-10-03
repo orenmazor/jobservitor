@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 from executor import handle_one_job
 
 from scheduler import app
-from models import redis_client
+from models import Job, redis_client
 
 client = TestClient(app)
 
@@ -55,7 +55,7 @@ def test_executor_ignores_architecture_that_doesnt_belong_to_it():
         response.json()["id"]
     ]
 
-    assert handle_one_job(gpu_type="ATI", cpu_cores=1, memory_gb=2) is None
+    assert handle_one_job(gpu_type="AMD", cpu_cores=1, memory_gb=2) is None
 
     # queue should still have the job
     assert redis_client.zrange("jobservitor:queue:NVIDIA", 0, -1) == [
@@ -80,9 +80,37 @@ def test_executor_checks_the_any_queue_after_checking_its_own_arch():
     ]
 
     assert (
-        handle_one_job(gpu_type="ATI", cpu_cores=1, memory_gb=2).id
+        handle_one_job(gpu_type="AMD", cpu_cores=1, memory_gb=2).id
         == response.json()["id"]
     )
+
+    # queue should be empty
+    assert redis_client.zrange("jobservitor:queue:Any", 0, -1) == []
+
+
+def test_executor_completes_a_job_and_correctly_updates_it():
+    job_data = {
+        "image": "python:3.8",
+        "command": ["python"],
+        "arguments": ["-c", "print('Hello, World!')"],
+        "gpu_type": "AMD",
+        "memory_requested": 1,
+        "cpu_cores_requested": 2,
+    }
+    response = client.post("/jobs", json=job_data)
+    assert response.status_code == 200
+
+    pending_job = Job.load(response.json()["id"])
+    assert pending_job.status == "pending"
+    assert pending_job.started_at is None
+    assert pending_job.completed_at is None
+
+    complete_job = handle_one_job(gpu_type="AMD", cpu_cores=1, memory_gb=2)
+    assert complete_job.id == pending_job.id
+    assert complete_job.status == "succeeded"
+    assert complete_job.started_at is not None
+    assert complete_job.completed_at is not None
+    assert complete_job.worker == "executor-1-127.0.0.1"
 
     # queue should be empty
     assert redis_client.zrange("jobservitor:queue:Any", 0, -1) == []

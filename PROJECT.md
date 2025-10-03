@@ -9,7 +9,6 @@ JOBservitor
 ### Backlog
 
 - [ ] Instead of the queue being by time, maybe it should be by requirements?
-- [ ] Executor should respect job requirements
 - [ ] Executors should register themselves with the scheduler
 - [ ] Executors can receive messages from the schedulers
 - [ ] Examine the LIST command for jobs. it relies on the queues, but may be insufficient.
@@ -25,11 +24,12 @@ JOBservitor
 
 ### In Progress
 
-- [ ] Executors can update jobs and mark them as running
-- [ ] Executors should monitor the ANY queue as well
+- [ ] Executor should respect job requirements
 
 ### Done
 
+- [x] Executors can update jobs and mark them as running
+- [x] Executors should monitor the ANY queue as well
 - [x] Split the job queue by architecture
 - [x] Executors can pick jobs off their queue
 - [x] Create initial executors

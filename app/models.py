@@ -36,6 +36,8 @@ class Job(JobCreate):
     submitted_at: datetime = datetime.now()
     aborted_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
+    started_at: Optional[datetime] = None
+    worker: Optional[str] = None
 
     def save(self) -> bool:
         """
