@@ -10,7 +10,20 @@ from os import environ
 from models import Job
 
 idle_time = environ.get("EXECUTOR_IDLE_TIME", 1)
-blocking_time = environ.get("EXECUTOR_BLOCKING_TIME", 5)
+blocking_time = environ.get("EXECUTOR_BLOCKING_TIME", 1)
+
+
+def _pop_job(
+    gpu_type: Literal["NVIDIA", "ATI", "Intel", "Any"] = "Any"
+) -> Optional[Job]:
+    # this needs to be abstracted out. this service shouldn't know about redis
+    queued_work = redis_client.bzpopmin(
+        f"jobservitor:queue:{gpu_type}", timeout=blocking_time
+    )
+
+    # TODO: we have to check the job requirements in addition to the gpu type!
+
+    return queued_work
 
 
 # TODO: could be rewritten as a generator. for funsies and better readability.
@@ -19,10 +32,11 @@ def handle_one_job(
     cpu_cores: int,
     memory_gb: int,
 ) -> Optional[Job]:
-    # this needs to be abstracted out. this service shouldn't know about redis
-    queued_work = redis_client.bzpopmin(
-        f"jobservitor:queue:{gpu_type}", timeout=blocking_time
-    )
+
+    for queue_to_monitor in [gpu_type, "Any"]:
+        queued_work = _pop_job(queue_to_monitor)
+        if queued_work:
+            break
 
     if queued_work is None:
         print("No job found, sleeping...")

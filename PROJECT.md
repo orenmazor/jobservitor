@@ -26,6 +26,7 @@ JOBservitor
 ### In Progress
 
 - [ ] Executors can update jobs and mark them as running
+- [ ] Executors should monitor the ANY queue as well
 
 ### Done
 
