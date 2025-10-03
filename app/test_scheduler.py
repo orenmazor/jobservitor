@@ -10,7 +10,7 @@ client = TestClient(app)
 
 @pytest.fixture(autouse=True)
 def run_around_tests():
-    # Code that will run before your test, e.g. setting up a test database
+    redis_client.flushdb()  # Clear the Redis database before each test, in case I randomly killed it
     yield  # This is where the testing happens
     redis_client.flushdb()  # Clear the Redis database after each test
 

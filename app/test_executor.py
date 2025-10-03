@@ -26,4 +26,10 @@ def test_job_found():
     response = client.post("/jobs", json=job_data)
     assert response.status_code == 200
 
+    # queue should have a job
+    assert redis_client.zrange("jobservitor:queue", 0, -1) == [response.json()["id"]]
+
     assert handle_one_job().id == response.json()["id"]
+
+    # queue should be empty now
+    assert redis_client.zrange("jobservitor:queue", 0, -1) == []
