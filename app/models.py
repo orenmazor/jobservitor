@@ -1,8 +1,6 @@
 from typing import List, Optional, Literal, Dict
 from datetime import datetime
 from uuid import uuid4
-import redis
-from os import environ
 
 from pydantic import BaseModel
 from persistence import redis_client

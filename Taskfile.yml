@@ -9,7 +9,7 @@ tasks:
 
   lint:
     cmds:
-      - uv run black --check .
+      - uv run ruff check
 
   scheduler:
     dir: app
