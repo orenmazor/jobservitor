@@ -5,10 +5,7 @@ import redis
 from os import environ
 
 from pydantic import BaseModel
-
-redis_client = redis.from_url(
-    environ.get("REDIS_URI", "redis://localhost:6379/0"), decode_responses=True
-)
+from persistence import redis_client
 
 
 class JobCreate(BaseModel):
@@ -28,7 +25,7 @@ class JobCreate(BaseModel):
     image: str
     command: List[str]
     arguments: List[str]
-    gpu_type: Literal["Intel", "NVIDIA", "AMD"] = "NVIDIA"
+    gpu_type: Optional[Literal["Intel", "NVIDIA", "AMD"]] = None
     memory_requested: int = 1  # in GB
     cpu_cores_requested: int = 1
 

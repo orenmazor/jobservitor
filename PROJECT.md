@@ -8,19 +8,27 @@ JOBservitor
 
 ### Backlog
 
-- [ ] Create initial executors
-- [ ] Executors can pick jobs off their queue
 - [ ] Executors can update jobs and mark them as running
 - [ ] Executors can receive messages from the schedulers
 - [ ] Examine the LIST command for jobs. it relies on the queues, but may be insufficient.
 - [ ] Replace redis persistence layer with something more fun, that will take load off redis for performance
+- [ ] Add option for job timeout
+- [ ] Add docker compose scaffolding to start everything together
+- [ ] Add responsible signal handling for executor
+- [ ] A job should track what executor is working on it (IP, etc)
+- [ ] Make sure jobs are effectively distributed across executors, rather than having one executor dominate things
+- [ ] Add executor introspection to identify the system they are
+- [ ] Executor should update job status, somehow
+- [ ] Job aborting
 
 ### In Progress
 
-- [ ] Split queues by architecture (why bother with executors monitoring jobs for others?)
+- [ ] Executors can pick jobs off their queue
 
 ### Done
 
+- [x] Create initial executors
 - [x] Initial fastapi scheduler, uv, test suite
 - [x] Define the initial job structure and plumb CRUD into scheduler
 - [x] Plumb redis saving and enqueue for jobs
+- [x] Remove default GPU arch as an option, turns out GPU arch can be not a requirement
