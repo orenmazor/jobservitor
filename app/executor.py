@@ -3,16 +3,24 @@
 # TODO: should it receive shutdown notices from the scheduler? or redis? does it matter?
 # TODO: add responsible signal handling for graceful shutdown
 from typing import Optional, Literal
-
+import docker
 from persistence import dequeue_job
 from time import sleep
 from os import environ
+from sys import exit
 from models import Job
 from datetime import datetime
 from socket import gethostname, gethostbyname
 
 idle_time = environ.get("EXECUTOR_IDLE_TIME", 1)
 blocking_time = environ.get("EXECUTOR_BLOCKING_TIME", 1)
+
+try:
+    client = docker.from_env()
+    print("Docker server version: " + client.info()["ServerVersion"])
+except docker.errors.DockerException as e:
+    print(e)
+    exit(1)
 
 # not the best way to get the IP
 executor_name = (
@@ -41,19 +49,38 @@ def handle_one_job(
         # should never be popped
         return
 
-    # TODO: check that the job matches the executor's capabilities
-    # TODO: should i have architecture based queues?
-
-    # TODO: run job somehow
     job.status = "running"
     job.started_at = datetime.now()
     job.worker = executor_name
     job.save()
 
-    # simulate the job running by faking a docker execution?
+    # detach so that we can return to it and kill it if needed
+    try:
+        container = client.containers.run(
+            image=job.image, command=" ".join(job.command + job.arguments), detach=True
+        )
+    except (docker.errors.ImageNotFound, docker.errors.APIError):
+        job.status = "failed"
+        job.completed_at = datetime.now()
+        job.save()
 
+        return job
+
+    while container.status != "exited":
+        # TODO: watch for kill signal on the executor
+        # TODO: watch for resource consumption
+        container.reload()
+
+    # massively not ideal, but properly managing these logs
+    # is out of scope here (and indeed, for some enterprise tools that will
+    # remain nameless..)
+    print(container.logs().decode())
     job.completed_at = datetime.now()
-    job.status = "succeeded"
+    if container.wait()["StatusCode"] != 0:
+        job.status = "failed"
+    else:
+        job.status = "succeeded"
+
     job.save()
 
     return job

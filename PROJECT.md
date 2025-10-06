@@ -27,6 +27,7 @@ JOBservitor
 
 ### Done
 
+- [x] Run Docker jobs
 - [x] Executor should respect job requirements
 - [x] A job should track what executor is working on it (IP, etc)
 - [x] Executors can update jobs and mark them as running

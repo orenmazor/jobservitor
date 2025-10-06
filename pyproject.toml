@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "black>=25.9.0",
+    "docker>=7.1.0",
     "fastapi[standard]>=0.118.0",
     "pdbpp>=0.11.7",
     "pydantic>=2.11.9",
