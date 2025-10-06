@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+import threading
 
 from executor import handle_one_job
 
@@ -235,3 +236,24 @@ def test_executor_respects_the_exit_code_of_the_job():
     assert client.post("/jobs", json=job_data).status_code == 200
     complete_job = handle_one_job(gpu_type="Any", cpu_cores=1, memory_gb=1)
     assert complete_job.status == "failed"
+
+
+def test_long_running_job_status():
+    job_data = {
+        "image": "busybox:1.37",
+        "command": ["sleep"],
+        "arguments": ["5"],
+        "memory_requested": 1,
+        "cpu_cores_requested": 1,
+    }
+    response = client.post("/jobs", json=job_data)
+    assert response.status_code == 200
+
+    # using asyncio for this might be more fun
+    temp_thread = threading.Thread(target=handle_one_job, args=("Any", 1, 1))
+    temp_thread.start()
+
+    assert Job.load(response.json()["id"]).status == "running"
+
+    temp_thread.join()
+    assert Job.load(response.json()["id"]).status == "succeeded"

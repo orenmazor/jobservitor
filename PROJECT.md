@@ -8,7 +8,7 @@ JOBservitor
 
 ### Backlog
 
-- [ ] Instead of the queue being by time, maybe it should be by requirements?
+- [ ] full integration tests that run both scheduler and executors
 - [ ] Executors should register themselves with the scheduler
 - [ ] Executors can receive messages from the schedulers
 - [ ] Examine the LIST command for jobs. it relies on the queues, but may be insufficient.
