@@ -40,10 +40,10 @@ def handle_one_job(
     memory_gb: int,
 ) -> Optional[Job]:
 
-    for queue_to_monitor in [gpu_type, "Any"]:
-        queued_work = _pop_job(queue_to_monitor)
-        if queued_work:
-            break
+    queued_work = _pop_job(gpu_type)
+    if queued_work is None:
+        # check the ANY queue next"""
+        queued_work = _pop_job("Any")
 
     if queued_work is None:
         print("No job found, sleeping...")

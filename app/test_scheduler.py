@@ -8,13 +8,6 @@ from models import redis_client
 client = TestClient(app)
 
 
-@pytest.fixture(autouse=True)
-def run_around_tests():
-    redis_client.flushdb()  # Clear the Redis database before each test, in case I randomly killed it
-    yield  # This is where the testing happens
-    redis_client.flushdb()  # Clear the Redis database after each test
-
-
 # happy path
 def test_submit_job():
     job_data = {

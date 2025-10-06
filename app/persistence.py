@@ -23,6 +23,6 @@ def load_job(job_id) -> str | None:
 
 def enqueue_job(job) -> bool:
     # score by submission timestamp so we can FIFO as much as possible
-    score = int(job.submitted_at.timestamp())
+    score = job.submitted_at.timestamp()
 
     return redis_client.zadd(QUEUE_PREFIX + job.gpu_type, {job.id: score})

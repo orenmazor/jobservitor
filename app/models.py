@@ -2,7 +2,7 @@ from typing import List, Optional, Literal, Dict
 from datetime import datetime
 from uuid import uuid4
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from persistence import redis_client, enqueue_job, save_job, load_job
 
 
@@ -31,9 +31,9 @@ class JobCreate(BaseModel):
 
 class Job(JobCreate):
     # job housekeeping stuff
-    id: str = str(uuid4())
+    id: str = Field(default_factory=lambda: str(uuid4()))
     status: Literal["pending", "running", "succeeded", "failed"] = "pending"
-    submitted_at: datetime = datetime.now()
+    submitted_at: datetime = Field(default_factory=lambda: datetime.now())
     aborted_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     started_at: Optional[datetime] = None

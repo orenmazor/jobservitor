@@ -5,6 +5,8 @@ from executor import handle_one_job
 from scheduler import app
 from models import Job, redis_client
 
+from time import sleep
+
 client = TestClient(app)
 
 
@@ -114,3 +116,37 @@ def test_executor_completes_a_job_and_correctly_updates_it():
 
     # queue should be empty
     assert redis_client.zrange("jobservitor:queue:Any", 0, -1) == []
+
+
+def test_executor_pulls_two_jobs_in_sequence():
+    job_data = {
+        "image": "first",
+        "command": ["python"],
+        "arguments": ["-c", "print('Hello, World!')"],
+        "gpu_type": "AMD",
+        "memory_requested": 1,
+        "cpu_cores_requested": 2,
+    }
+    response_first = client.post("/jobs", json=job_data)
+    assert response_first.status_code == 200
+
+    sleep(2)  # ensure the second job has a later timestamp
+    job_data = {
+        "image": "second",
+        "command": ["python"],
+        "arguments": ["-c", "print('Goodbye, Cruel World!')"],
+        "gpu_type": "AMD",
+        "memory_requested": 1,
+        "cpu_cores_requested": 2,
+    }
+    response_second = client.post("/jobs", json=job_data)
+    assert response_second.status_code == 200
+
+    # make extra sure that we did not mess up this part becuase nothing else will work
+    assert response_first.json()["id"] != response_second.json()["id"]
+
+    complete_job_first = handle_one_job(gpu_type="AMD", cpu_cores=1, memory_gb=2)
+    assert complete_job_first.image == "first"
+
+    complete_job_second = handle_one_job(gpu_type="AMD", cpu_cores=1, memory_gb=2)
+    assert complete_job_second.image == "second"
