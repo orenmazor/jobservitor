@@ -1,7 +1,11 @@
 from fastapi.testclient import TestClient
 
+import threading
+from models import Job
+from executor import handle_one_job
 from scheduler import app
 from uuid import uuid4
+from time import sleep
 
 client = TestClient(app)
 
@@ -99,3 +103,85 @@ def test_health_check():
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
+
+def test_abort_pending_job():
+    # pending job should be abortable
+    job_data = {
+        "image": "busybox:1.37",
+        "command": ["uname"],
+        "arguments": ["-a"],
+        "memory_requested": 1,
+        "cpu_cores_requested": 1,
+    }
+    response = client.post("/jobs", json=job_data)
+    assert response.status_code == 200
+
+    abort_response = client.delete(f"/jobs/{response.json()["id"]}")
+    assert abort_response.status_code == 200
+    assert Job.load(response.json()["id"]).status == "aborted"
+
+
+def test_abort_succeeded_job():
+    # succeeded job should NOT be abortable
+    job_data = {
+        "image": "busybox:1.37",
+        "command": ["uname"],
+        "arguments": ["-a"],
+        "memory_requested": 1,
+        "cpu_cores_requested": 1,
+    }
+    response = client.post("/jobs", json=job_data)
+    assert response.status_code == 200
+
+    complete_job = handle_one_job(gpu_type="Any", cpu_cores=1, memory_gb=1)
+    assert complete_job.status == "succeeded"
+
+    abort_response = client.delete(f"/jobs/{response.json()["id"]}")
+    assert abort_response.status_code == 400
+    assert Job.load(response.json()["id"]).status == "succeeded"
+
+
+def test_abort_aborted_job():
+    job_data = {
+        "image": "busybox:1.37",
+        "command": ["uname"],
+        "arguments": ["-a"],
+        "memory_requested": 1,
+        "cpu_cores_requested": 1,
+    }
+    response = client.post("/jobs", json=job_data)
+    assert response.status_code == 200
+
+    abort_response = client.delete(f"/jobs/{response.json()["id"]}")
+    assert Job.load(response.json()["id"]).status == "aborted"
+
+    abort_response = client.delete(f"/jobs/{response.json()["id"]}")
+    assert abort_response.status_code == 400
+    assert "Job already completed, cannot abort. sorry!" in abort_response.text
+
+
+def test_abort_running_job():
+    job_data = {
+        "image": "busybox:1.37",
+        "command": ["sleep"],
+        "arguments": ["5"],
+        "memory_requested": 1,
+        "cpu_cores_requested": 1,
+    }
+    response = client.post("/jobs", json=job_data)
+    assert response.status_code == 200
+
+    # using asyncio for this might be more fun
+    temp_thread = threading.Thread(target=handle_one_job, args=("Any", 1, 1))
+    temp_thread.start()
+
+    # rest our weary roboheads for a moment
+    sleep(1)
+
+    assert Job.load(response.json()["id"]).status == "running"
+    abort_response = client.delete(f"/jobs/{response.json()["id"]}")
+    assert abort_response.status_code == 200
+
+    temp_thread.join()
+    assert Job.load(response.json()["id"]).status == "aborted"

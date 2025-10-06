@@ -23,10 +23,10 @@ JOBservitor
 
 ### In Progress
 
-- [ ] Job aborting
 
 ### Done
 
+- [x] Job aborting
 - [x] Run Docker jobs
 - [x] Executor should respect job requirements
 - [x] A job should track what executor is working on it (IP, etc)

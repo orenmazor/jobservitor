@@ -71,6 +71,18 @@ def handle_one_job(
         # TODO: watch for resource consumption
         container.reload()
 
+        # again,t his is very very bad engineering
+        # and solely first implementation just to get this working
+        # but what i need is a comms channel for the scheduler to tell the executor
+        # to kill the job
+        job = Job.load(job.id)
+        if job.status == "aborted":
+            container.kill()
+            job.completed_at = datetime.now()
+            job.status = "aborted"
+            job.save()
+            return job
+
     # massively not ideal, but properly managing these logs
     # is out of scope here (and indeed, for some enterprise tools that will
     # remain nameless..)

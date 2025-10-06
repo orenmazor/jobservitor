@@ -52,9 +52,28 @@ def list_jobs() -> List[Job]:
 @app.delete("/jobs/{job_id}")
 def abort_job(job_id) -> bool:
     """Receives a job id and aborts it if the job is in pending/running status"""
+    job = Job.load(job_id)
+
+    # this is pretty improvised and just because I'm running out of my self imposted timeline
+    # but what I really should have is a way to communicate to the worker that its job has been cancelled
+    # probably via some kinda pubsub type of mechanism for the executor to listen for abort messages
+    # from the scheduler
+    if job.status in ["pending", "running"]:
+        job.status = "aborted"
+        job.save()
+        return True
+        # TODO: remove from queue
+        # but for now leave and let the executors delete it when they come across it
+
+    if job.status in ["succeeded", "failed", "aborted"]:
+        raise HTTPException(
+            status_code=400, detail="Job already completed, cannot abort. sorry!"
+        )
+
     # TODO: find the job in the queue and delete it from the queue if it's pending
     # TODO: how to communicate to executor that they need to abort the job? will simply setting the job status to aborted be sufficient for THIS project?
-    return HTTPException(status_code=501, detail="Not implemented yet")
+
+    return True
 
 
 @app.get("/")

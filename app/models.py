@@ -32,7 +32,9 @@ class JobCreate(BaseModel):
 class Job(JobCreate):
     # job housekeeping stuff
     id: str = Field(default_factory=lambda: str(uuid4()))
-    status: Literal["pending", "running", "succeeded", "failed"] = "pending"
+    # technically the requirement specified did not include 'aborted'
+    # but i think its valuable to separate that from failed
+    status: Literal["pending", "running", "succeeded", "failed", "aborted"] = "pending"
     submitted_at: datetime = Field(default_factory=lambda: datetime.now())
     aborted_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
