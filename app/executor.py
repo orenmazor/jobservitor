@@ -37,6 +37,12 @@ def handle_one_job(
         return
 
     job = Job.load(queued_work[1])
+
+    if job.status != "pending":
+        # this could be an exception at this layer, because a non-pending job
+        # should never be popped
+        return
+
     # TODO: check that the job matches the executor's capabilities
     # TODO: should i have architecture based queues?
 

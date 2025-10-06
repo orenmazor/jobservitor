@@ -150,3 +150,23 @@ def test_executor_pulls_two_jobs_in_sequence():
 
     complete_job_second = handle_one_job(gpu_type="AMD", cpu_cores=1, memory_gb=2)
     assert complete_job_second.image == "second"
+
+
+def test_executor_respects_job_status():
+    job_data = {
+        "image": "first",
+        "command": ["python"],
+        "arguments": ["-c", "print('Hello, World!')"],
+        "gpu_type": "AMD",
+        "memory_requested": 1,
+        "cpu_cores_requested": 2,
+    }
+    response_first = client.post("/jobs", json=job_data)
+    assert response_first.status_code == 200
+
+    job = Job.load(response_first.json()["id"])
+    job.status = "running"
+    job.save()
+
+    complete_job_first = handle_one_job(gpu_type="AMD", cpu_cores=1, memory_gb=2)
+    assert complete_job_first is None
