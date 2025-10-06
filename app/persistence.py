@@ -4,6 +4,7 @@ Purpose is just to keep the rest of the code clean and consistent"""
 
 import redis
 from os import environ
+from typing import Optional, Literal, Dict
 
 PROJECT_PREFIX = "jobservitor:"
 QUEUE_PREFIX = "jobservitor:queue:"
@@ -26,3 +27,15 @@ def enqueue_job(job) -> bool:
     score = job.submitted_at.timestamp()
 
     return redis_client.zadd(QUEUE_PREFIX + job.gpu_type, {job.id: score})
+
+
+def dequeue_job(
+    gpu_type: Literal["NVIDIA", "AMD", "Intel", "Any"] = "Any",
+    blocking_time: int = 1,
+) -> Optional[Dict]:
+    # this needs to be abstracted out. this service shouldn't know about redis
+    queued_work = redis_client.bzpopmin(QUEUE_PREFIX + gpu_type, timeout=blocking_time)
+
+    # TODO: we have to check the job requirements in addition to the gpu type!
+
+    return queued_work

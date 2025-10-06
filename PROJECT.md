@@ -16,7 +16,6 @@ JOBservitor
 - [ ] Add option for job timeout
 - [ ] Add docker compose scaffolding to start everything together
 - [ ] Add responsible signal handling for executor
-- [ ] A job should track what executor is working on it (IP, etc)
 - [ ] Make sure jobs are effectively distributed across executors, rather than having one executor dominate things
 - [ ] Add executor introspection to identify the system they are
 - [ ] Executor should update job status, somehow
@@ -28,6 +27,7 @@ JOBservitor
 
 ### Done
 
+- [x] A job should track what executor is working on it (IP, etc)
 - [x] Executors can update jobs and mark them as running
 - [x] Executors should monitor the ANY queue as well
 - [x] Split the job queue by architecture

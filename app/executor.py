@@ -4,7 +4,7 @@
 # TODO: add responsible signal handling for graceful shutdown
 from typing import Optional, Literal
 
-from persistence import redis_client
+from persistence import dequeue_job
 from time import sleep
 from os import environ
 from models import Job
@@ -20,19 +20,6 @@ executor_name = (
 )
 
 
-def _pop_job(
-    gpu_type: Literal["NVIDIA", "AMD", "Intel", "Any"] = "Any"
-) -> Optional[Job]:
-    # this needs to be abstracted out. this service shouldn't know about redis
-    queued_work = redis_client.bzpopmin(
-        f"jobservitor:queue:{gpu_type}", timeout=blocking_time
-    )
-
-    # TODO: we have to check the job requirements in addition to the gpu type!
-
-    return queued_work
-
-
 # TODO: could be rewritten as a generator. for funsies and better readability.
 def handle_one_job(
     gpu_type: Literal["NVIDIA", "AMD", "Intel", "Any"],
@@ -40,10 +27,10 @@ def handle_one_job(
     memory_gb: int,
 ) -> Optional[Job]:
 
-    queued_work = _pop_job(gpu_type)
+    queued_work = dequeue_job(gpu_type, blocking_time)
     if queued_work is None:
         # check the ANY queue next"""
-        queued_work = _pop_job("Any")
+        queued_work = dequeue_job("Any", blocking_time)
 
     if queued_work is None:
         print("No job found, sleeping...")
