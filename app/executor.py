@@ -27,16 +27,14 @@ def handle_one_job(
     memory_gb: int,
 ) -> Optional[Job]:
 
-    queued_work = dequeue_job(gpu_type, blocking_time)
-    if queued_work is None:
+    job = dequeue_job(gpu_type, blocking_time, cpu_cores, memory_gb)
+    if job is None:
         # check the ANY queue next"""
-        queued_work = dequeue_job("Any", blocking_time)
+        job = dequeue_job("Any", blocking_time, cpu_cores, memory_gb)
 
-    if queued_work is None:
+    if job is None:
         print("No job found, sleeping...")
         return
-
-    job = Job.load(queued_work[1])
 
     if job.status != "pending":
         # this could be an exception at this layer, because a non-pending job

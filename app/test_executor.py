@@ -21,7 +21,7 @@ def test_job_found():
         "arguments": ["-c", "print('Hello, World!')"],
         "gpu_type": "NVIDIA",
         "memory_requested": 1,
-        "cpu_cores_requested": 2,
+        "cpu_cores_requested": 1,
     }
     response = client.post("/jobs", json=job_data)
     assert response.status_code == 200
@@ -47,7 +47,7 @@ def test_executor_ignores_architecture_that_doesnt_belong_to_it():
         "arguments": ["-c", "print('Hello, World!')"],
         "gpu_type": "NVIDIA",
         "memory_requested": 1,
-        "cpu_cores_requested": 2,
+        "cpu_cores_requested": 1,
     }
     response = client.post("/jobs", json=job_data)
     assert response.status_code == 200
@@ -71,7 +71,7 @@ def test_executor_checks_the_any_queue_after_checking_its_own_arch():
         "command": ["python"],
         "arguments": ["-c", "print('Hello, World!')"],
         "memory_requested": 1,
-        "cpu_cores_requested": 2,
+        "cpu_cores_requested": 1,
     }
     response = client.post("/jobs", json=job_data)
     assert response.status_code == 200
@@ -97,7 +97,7 @@ def test_executor_completes_a_job_and_correctly_updates_it():
         "arguments": ["-c", "print('Hello, World!')"],
         "gpu_type": "AMD",
         "memory_requested": 1,
-        "cpu_cores_requested": 2,
+        "cpu_cores_requested": 1,
     }
     response = client.post("/jobs", json=job_data)
     assert response.status_code == 200
@@ -125,7 +125,7 @@ def test_executor_pulls_two_jobs_in_sequence():
         "arguments": ["-c", "print('Hello, World!')"],
         "gpu_type": "AMD",
         "memory_requested": 1,
-        "cpu_cores_requested": 2,
+        "cpu_cores_requested": 1,
     }
     response_first = client.post("/jobs", json=job_data)
     assert response_first.status_code == 200
@@ -137,7 +137,7 @@ def test_executor_pulls_two_jobs_in_sequence():
         "arguments": ["-c", "print('Goodbye, Cruel World!')"],
         "gpu_type": "AMD",
         "memory_requested": 1,
-        "cpu_cores_requested": 2,
+        "cpu_cores_requested": 1,
     }
     response_second = client.post("/jobs", json=job_data)
     assert response_second.status_code == 200
@@ -159,7 +159,7 @@ def test_executor_respects_job_status():
         "arguments": ["-c", "print('Hello, World!')"],
         "gpu_type": "AMD",
         "memory_requested": 1,
-        "cpu_cores_requested": 2,
+        "cpu_cores_requested": 1,
     }
     response_first = client.post("/jobs", json=job_data)
     assert response_first.status_code == 200
@@ -170,3 +170,30 @@ def test_executor_respects_job_status():
 
     complete_job_first = handle_one_job(gpu_type="AMD", cpu_cores=1, memory_gb=2)
     assert complete_job_first is None
+
+
+def test_executor_finds_the_one_job_it_can_run():
+    job_data = {
+        "image": "big",
+        "command": ["python"],
+        "arguments": ["-c", "print('Hello, World!')"],
+        "memory_requested": 10,
+        "cpu_cores_requested": 1,
+    }
+    assert client.post("/jobs", json=job_data).status_code == 200
+    assert client.post("/jobs", json=job_data).status_code == 200
+    assert client.post("/jobs", json=job_data).status_code == 200
+    assert client.post("/jobs", json=job_data).status_code == 200
+    assert client.post("/jobs", json=job_data).status_code == 200
+
+    job_data = {
+        "image": "doable",
+        "command": ["python"],
+        "arguments": ["-c", "print('Hello, World!')"],
+        "memory_requested": 1,
+        "cpu_cores_requested": 1,
+    }
+    assert client.post("/jobs", json=job_data).status_code == 200
+
+    complete_job = handle_one_job(gpu_type="Any", cpu_cores=1, memory_gb=1)
+    assert complete_job.image == "doable"

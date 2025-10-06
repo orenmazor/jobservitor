@@ -19,14 +19,15 @@ JOBservitor
 - [ ] Make sure jobs are effectively distributed across executors, rather than having one executor dominate things
 - [ ] Add executor introspection to identify the system they are
 - [ ] Executor should update job status, somehow
-- [ ] Job aborting
+- [ ] Executor dequeue logic should be rewritten into LUA to have proper atomicity and reduce job dequeue lag
 
 ### In Progress
 
-- [ ] Executor should respect job requirements
+- [ ] Job aborting
 
 ### Done
 
+- [x] Executor should respect job requirements
 - [x] A job should track what executor is working on it (IP, etc)
 - [x] Executors can update jobs and mark them as running
 - [x] Executors should monitor the ANY queue as well
