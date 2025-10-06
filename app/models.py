@@ -3,7 +3,7 @@ from datetime import datetime
 from uuid import uuid4
 
 from pydantic import BaseModel
-from persistence import redis_client
+from persistence import redis_client, enqueue_job, save_job, load_job
 
 
 class JobCreate(BaseModel):
@@ -45,7 +45,8 @@ class Job(JobCreate):
         This persists the entire job object to redis so we can retrieve it later, and avoid
         saving the entire object in the redis queue.
         """
-        return redis_client.set(f"jobservitor:{self.id}", self.model_dump_json())
+
+        return save_job(self)
 
     def enqueue(self) -> bool:
         """
@@ -56,21 +57,18 @@ class Job(JobCreate):
 
         Is it better to have one queue for all jobs, or to have multiple queues sharded based on architecture?
         One queue is simpler to enqueue and dequeue and manage.... but multiple queues makes it easier for
-        the executors
+        the executors. Use sharded queues until proven to be a bad idea.
 
         And once I start sharding, does it make sense to only shard by architecture or should I also shard by
         mem/cpu buckets? e.g. 1-5GB, 5-20GB, 20+GB?
         """
 
-        # score by submission timestamp so we can FIFO as much as possible
-        score = int(self.submitted_at.timestamp())
-
-        return redis_client.zadd(f"jobservitor:queue:{self.gpu_type}", {self.id: score})
+        return enqueue_job(self)
 
     @classmethod
     def load(cls, job_id) -> Optional["Job"]:
         """Dear oren. are you just reinventing ActiveRecord?"""
-        data = redis_client.get(f"jobservitor:{job_id}")
+        data = load_job(job_id)
         if data:
             return Job.model_validate_json(data)
         return None
