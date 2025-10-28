@@ -86,10 +86,15 @@ class Job(JobCreate):
         # TODO2: do not rehydrate the IDs here, force the client to do it
         # TODO3: so here we are. sharded the queue and now its kinda ugly. does this method even make sense anymore?
         values = []
-        for gpu_type in ["Intel", "NVIDIA", "AMD", "Any"]:
-            values += redis_client.zrange(
-                f"jobservitor:queue:{gpu_type}", 0, -1, withscores=True
-            )
+        for dc in ["Any"]:
+            for region in ["Any", "az1"]:
+                for gpu_type in ["Intel", "NVIDIA", "AMD", "Any"]:
+                    values += redis_client.zrange(
+                        f"jobservitor:queue:{dc}:{region}:{gpu_type}",
+                        0,
+                        -1,
+                        withscores=True,
+                    )
 
         # TODO3: is it better to rehydrate here or return these fragments? the problem here
         # is that because we only store fragments of the job definition in the sorted set

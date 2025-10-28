@@ -36,17 +36,24 @@ def test_job_found():
     assert response.status_code == 200
 
     # queue should have a job
-    assert redis_client.zrange(queue_name("NVIDIA"), 0, -1) == [response.json()["id"]]
+    assert redis_client.zrange(queue_name("NVIDIA", "Any", "Any"), 0, -1) == [
+        response.json()["id"]
+    ]
 
     assert (
         handle_one_job(
-            gpu_type="NVIDIA", cpu_cores=1, memory_gb=2, dc="us-east-1", region="az1"
+            gpu_type="NVIDIA", cpu_cores=1, memory_gb=2, dc="Any", region="Any"
         ).id
         == response.json()["id"]
     )
 
     # queue should be empty now
-    assert redis_client.zrange(queue_name("NVIDIA"), 0, -1) == []
+    assert (
+        redis_client.zrange(
+            queue_name(gpu_type="NVIDIA", dc="us-east-1", region="az1"), 0, -1
+        )
+        == []
+    )
 
 
 def test_executor_ignores_architecture_that_doesnt_belong_to_it():
@@ -62,7 +69,9 @@ def test_executor_ignores_architecture_that_doesnt_belong_to_it():
     assert response.status_code == 200
 
     # queue should have a job
-    assert redis_client.zrange(queue_name("NVIDIA"), 0, -1) == [response.json()["id"]]
+    assert redis_client.zrange(queue_name("NVIDIA", "Any", "Any"), 0, -1) == [
+        response.json()["id"]
+    ]
 
     assert (
         handle_one_job(
@@ -72,7 +81,9 @@ def test_executor_ignores_architecture_that_doesnt_belong_to_it():
     )
 
     # queue should still have the job
-    assert redis_client.zrange(queue_name("NVIDIA"), 0, -1) == [response.json()["id"]]
+    assert redis_client.zrange(
+        queue_name(gpu_type="NVIDIA", dc="Any", region="Any"), 0, -1
+    ) == [response.json()["id"]]
 
 
 def test_executor_checks_the_any_queue_after_checking_its_own_arch():
@@ -87,7 +98,9 @@ def test_executor_checks_the_any_queue_after_checking_its_own_arch():
     assert response.status_code == 200
 
     # this job went to the Any queue
-    assert redis_client.zrange(queue_name(), 0, -1) == [response.json()["id"]]
+    assert redis_client.zrange(queue_name("Any", "Any", "Any"), 0, -1) == [
+        response.json()["id"]
+    ]
 
     assert (
         handle_one_job(
@@ -97,7 +110,7 @@ def test_executor_checks_the_any_queue_after_checking_its_own_arch():
     )
 
     # queue should be empty
-    assert redis_client.zrange(queue_name(), 0, -1) == []
+    assert redis_client.zrange(queue_name("Any", "Any", "Any"), 0, -1) == []
 
 
 def test_executor_completes_a_job_and_correctly_updates_it():
@@ -118,7 +131,7 @@ def test_executor_completes_a_job_and_correctly_updates_it():
     assert pending_job.completed_at is None
 
     complete_job = handle_one_job(
-        gpu_type="AMD", cpu_cores=1, memory_gb=2, dc="us-east-1", region="az1"
+        gpu_type="AMD", cpu_cores=1, memory_gb=2, dc="Any", region="Any"
     )
     assert complete_job.id == pending_job.id
     assert complete_job.status == "succeeded"
@@ -127,7 +140,12 @@ def test_executor_completes_a_job_and_correctly_updates_it():
     assert complete_job.worker == "executor-1-127.0.0.1"
 
     # queue should be empty
-    assert redis_client.zrange(queue_name(), 0, -1) == []
+    assert (
+        redis_client.zrange(
+            queue_name(gpu_type="AMD", dc="us-east-1", region="az1"), 0, -1
+        )
+        == []
+    )
 
 
 def test_executor_pulls_two_jobs_in_sequence():
@@ -158,12 +176,12 @@ def test_executor_pulls_two_jobs_in_sequence():
     assert response_first.json()["id"] != response_second.json()["id"]
 
     complete_job_first = handle_one_job(
-        gpu_type="AMD", cpu_cores=1, memory_gb=2, dc="us-east-1", region="az1"
+        gpu_type="AMD", cpu_cores=1, memory_gb=2, dc="Any", region="Any"
     )
     assert complete_job_first.image == "busybox:1.36"
 
     complete_job_second = handle_one_job(
-        gpu_type="AMD", cpu_cores=1, memory_gb=2, dc="us-east-1", region="az1"
+        gpu_type="AMD", cpu_cores=1, memory_gb=2, dc="Any", region="Any"
     )
     assert complete_job_second.image == "busybox:1.37"
 
@@ -276,7 +294,7 @@ def test_long_running_job_status():
 
     # using asyncio for this might be more fun
     temp_thread = threading.Thread(
-        target=handle_one_job, args=("Any", 1, 1, "us-east-1", "az1")
+        target=handle_one_job, args=("Any", 1, 1, "Any", "Any")
     )
     temp_thread.start()
 
@@ -299,3 +317,11 @@ def test_executor_startup_configuration(monkeypatch):
     mock_listen.assert_called_once_with(
         gpu_type="NVIDIA", cpu_cores=1, memory_gb=1, dc="us-east-1", region="az1"
     )
+
+
+def test_we_can_work_off_of_the_dc():
+    pass
+
+
+def test_we_Can_work_off_of_the_region():
+    pass

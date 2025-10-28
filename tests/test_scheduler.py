@@ -192,3 +192,11 @@ def test_abort_running_job():
 
     temp_thread.join()
     assert Job.load(response.json()["id"]).status == "aborted"
+
+
+def test_we_can_Schedule_by_Region():
+    pass
+
+
+def test_we_can_Schedule_by_DC():
+    pass
