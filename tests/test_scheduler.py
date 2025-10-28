@@ -34,6 +34,7 @@ def test_submitting_and_getting_job_back():
         "gpu_type": "NVIDIA",
         "memory_requested": 1,
         "cpu_cores_requested": 2,
+        "region": "az1",
     }
     response = client.post("/jobs", json=job_data)
     assert response.status_code == 200
@@ -43,6 +44,8 @@ def test_submitting_and_getting_job_back():
     assert list_response.status_code == 200
     assert list_response.json()[0]["id"] == job_id
     assert list_response.json()[0]["image"] == job_data["image"]
+    assert list_response.json()[0]["region"] == job_data["region"]
+    assert list_response.json()[0]["dc"] == "Any"
 
 
 def test_housekeeping_parameters_cannot_be_set_on_job_creation():

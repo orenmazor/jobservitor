@@ -28,6 +28,10 @@ class JobCreate(BaseModel):
     memory_requested: int = 1  # in GB
     cpu_cores_requested: int = 1
 
+    # do not allow any random strings in here, add validation!
+    region: str = "Any"
+    dc: str = "Any"
+
 
 class Job(JobCreate):
     # job housekeeping stuff
