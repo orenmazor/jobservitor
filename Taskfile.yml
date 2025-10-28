@@ -17,7 +17,6 @@ tasks:
       - uv run fastapi dev scheduler.py
 
   test:
-    dir: app
     cmds:
       - task: lint
-      - uv run pytest -s --pdb
+      - uv run pytest --cov=app --cov-report=html --cov-report=term-missing -s --pdb ./tests

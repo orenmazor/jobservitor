@@ -3,7 +3,7 @@ from datetime import datetime
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
-from persistence import redis_client, enqueue_job, save_job, load_job
+from app.persistence import redis_client, enqueue_job, save_job, load_job
 
 
 class JobCreate(BaseModel):

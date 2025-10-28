@@ -4,11 +4,11 @@
 # TODO: add responsible signal handling for graceful shutdown
 from typing import Optional, Literal
 import docker
-from persistence import dequeue_job
+from app.persistence import dequeue_job
 from time import sleep
 from os import environ
 from sys import exit
-from models import Job
+from app.models import Job
 from datetime import datetime
 from socket import gethostname, gethostbyname
 

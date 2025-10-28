@@ -54,7 +54,7 @@ def dequeue_job(
     # which means that this entire function does not belong here
     # this should be either refactored to move into the executor logic, the model logic,
     # or if I switch to lua, entirely done-away with
-    from models import Job
+    from app.models import Job
 
     # first version of this is just a bzpopmin, but it can only get one item
     # queued_work = redis_client.bzpopmin(QUEUE_PREFIX + gpu_type, timeout=blocking_time)

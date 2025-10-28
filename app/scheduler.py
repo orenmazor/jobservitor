@@ -1,7 +1,7 @@
 from typing import List, Dict
 from fastapi import FastAPI, HTTPException
 
-from models import Job, JobCreate, redis_client
+from app.models import Job, JobCreate, redis_client
 
 app = FastAPI()
 

@@ -1,10 +1,10 @@
 from fastapi.testclient import TestClient
 import threading
 
-from executor import handle_one_job
+from app.executor import handle_one_job
 
-from scheduler import app
-from models import Job, redis_client
+from app.scheduler import app
+from app.models import Job, redis_client
 
 from time import sleep
 

@@ -1,6 +1,6 @@
 import pytest
 
-from persistence import redis_client
+from app.persistence import redis_client
 
 
 @pytest.fixture(autouse=True)

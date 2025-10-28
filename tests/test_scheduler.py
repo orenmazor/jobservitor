@@ -1,9 +1,9 @@
 from fastapi.testclient import TestClient
 
 import threading
-from models import Job
-from executor import handle_one_job
-from scheduler import app
+from app.models import Job
+from app.executor import handle_one_job
+from app.scheduler import app
 from uuid import uuid4
 from time import sleep
 
