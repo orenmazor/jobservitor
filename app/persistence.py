@@ -13,6 +13,8 @@ redis_client = redis.from_url(
     environ.get("REDIS_URI", "redis://localhost:6379/0"), decode_responses=True
 )
 
+print(f"Connected to Redis at {environ.get('REDIS_URI', 'redis://localhost:6379/0')}, version {redis_client.info()['redis_version']}")
+
 
 def save_job(job) -> bool:
     return redis_client.set(PROJECT_PREFIX + job.id, job.model_dump_json())

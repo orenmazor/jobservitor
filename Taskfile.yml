@@ -20,3 +20,11 @@ tasks:
     cmds:
       - task: lint
       - uv run pytest --cov=app --cov-report=html --cov-report=term-missing -s --pdb ./tests
+
+  server:
+    cmds:
+      - uv run fastapi dev app/scheduler.py
+
+  worker:
+    cmds:
+      - uv run python app/executor.py
