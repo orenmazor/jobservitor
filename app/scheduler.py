@@ -22,6 +22,7 @@ async def shutdown_event():
 def submit_job(job_create: JobCreate) -> Dict:
     """If the job fails to validate, fastapi will raise a 422 error automatically."""
     # using separated Job and JobCreate to protect housekeeping fields
+    # TODO: support DC + region in job spec
     job = Job.model_validate({**job_create.model_dump()})
 
     # TODO: if persistence fails to redis what do?

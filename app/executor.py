@@ -34,16 +34,28 @@ def handle_one_job(
     gpu_type: Literal["NVIDIA", "AMD", "Intel", "Any"],
     cpu_cores: int,
     memory_gb: int,
+    dc: str,
+    region: str,
 ) -> Optional[Job]:
 
-    job = dequeue_job(gpu_type, blocking_time, cpu_cores, memory_gb)
+    # look at my DC + my region + my GPU
+    job = dequeue_job(gpu_type, blocking_time, cpu_cores, memory_gb, dc, region)
+
+    # my DC + my region + any GPU
     if job is None:
-        # check the ANY queue next"""
-        job = dequeue_job("Any", blocking_time, cpu_cores, memory_gb)
+        job = dequeue_job("Any", blocking_time, cpu_cores, memory_gb, dc, region)
+
+    # look at my DC + any region + any GPU
+    if job is None:
+        job = dequeue_job("Any", blocking_time, cpu_cores, memory_gb, dc, "Any")
+
+    # any dc + any region + any gpu
+    if job is None:
+        job = dequeue_job("Any", blocking_time, cpu_cores, memory_gb, "Any", "Any")
 
     if job is None:
         print("No job found, sleeping...")
-        return
+        return None
 
     if job.status != "pending":
         # this could be an exception at this layer, because a non-pending job
@@ -125,7 +137,16 @@ def start_worker():
         )
     )
 
-    listen_for_work(gpu_type=gpu_type, cpu_cores=cpu_cores, memory_gb=memory_gb)
+    dc = environ.get("EXECUTOR_DATA_CENTER", "unknown-dc")
+    region = environ.get("EXECUTOR_REGION", "unknown-dc")
+
+    listen_for_work(
+        gpu_type=gpu_type,
+        cpu_cores=cpu_cores,
+        memory_gb=memory_gb,
+        dc=dc,
+        region=region,
+    )
 
 
 if __name__ == "__main__":

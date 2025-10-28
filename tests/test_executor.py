@@ -14,7 +14,12 @@ client = TestClient(app)
 
 
 def test_no_job_found():
-    assert handle_one_job(gpu_type="Any", cpu_cores=1, memory_gb=1) is None
+    assert (
+        handle_one_job(
+            gpu_type="Any", cpu_cores=1, memory_gb=1, dc="us-east-1", region="az1"
+        )
+        is None
+    )
 
 
 def test_job_found():
@@ -35,7 +40,9 @@ def test_job_found():
     ]
 
     assert (
-        handle_one_job(gpu_type="NVIDIA", cpu_cores=1, memory_gb=2).id
+        handle_one_job(
+            gpu_type="NVIDIA", cpu_cores=1, memory_gb=2, dc="us-east-1", region="az1"
+        ).id
         == response.json()["id"]
     )
 
@@ -60,7 +67,12 @@ def test_executor_ignores_architecture_that_doesnt_belong_to_it():
         response.json()["id"]
     ]
 
-    assert handle_one_job(gpu_type="AMD", cpu_cores=1, memory_gb=2) is None
+    assert (
+        handle_one_job(
+            gpu_type="AMD", cpu_cores=1, memory_gb=2, dc="us-east-1", region="az1"
+        )
+        is None
+    )
 
     # queue should still have the job
     assert redis_client.zrange("jobservitor:queue:NVIDIA", 0, -1) == [
@@ -85,7 +97,9 @@ def test_executor_checks_the_any_queue_after_checking_its_own_arch():
     ]
 
     assert (
-        handle_one_job(gpu_type="AMD", cpu_cores=1, memory_gb=2).id
+        handle_one_job(
+            gpu_type="AMD", cpu_cores=1, memory_gb=2, dc="us-east-1", region="az1"
+        ).id
         == response.json()["id"]
     )
 
@@ -110,7 +124,9 @@ def test_executor_completes_a_job_and_correctly_updates_it():
     assert pending_job.started_at is None
     assert pending_job.completed_at is None
 
-    complete_job = handle_one_job(gpu_type="AMD", cpu_cores=1, memory_gb=2)
+    complete_job = handle_one_job(
+        gpu_type="AMD", cpu_cores=1, memory_gb=2, dc="us-east-1", region="az1"
+    )
     assert complete_job.id == pending_job.id
     assert complete_job.status == "succeeded"
     assert complete_job.started_at is not None
@@ -148,10 +164,14 @@ def test_executor_pulls_two_jobs_in_sequence():
     # make extra sure that we did not mess up this part becuase nothing else will work
     assert response_first.json()["id"] != response_second.json()["id"]
 
-    complete_job_first = handle_one_job(gpu_type="AMD", cpu_cores=1, memory_gb=2)
+    complete_job_first = handle_one_job(
+        gpu_type="AMD", cpu_cores=1, memory_gb=2, dc="us-east-1", region="az1"
+    )
     assert complete_job_first.image == "busybox:1.36"
 
-    complete_job_second = handle_one_job(gpu_type="AMD", cpu_cores=1, memory_gb=2)
+    complete_job_second = handle_one_job(
+        gpu_type="AMD", cpu_cores=1, memory_gb=2, dc="us-east-1", region="az1"
+    )
     assert complete_job_second.image == "busybox:1.37"
 
 
@@ -171,7 +191,9 @@ def test_executor_respects_job_status():
     job.status = "running"
     job.save()
 
-    complete_job_first = handle_one_job(gpu_type="AMD", cpu_cores=1, memory_gb=2)
+    complete_job_first = handle_one_job(
+        gpu_type="AMD", cpu_cores=1, memory_gb=2, dc="us-east-1", region="az1"
+    )
     assert complete_job_first is None
 
 
@@ -198,7 +220,9 @@ def test_executor_finds_the_one_job_it_can_run():
     }
     assert client.post("/jobs", json=job_data).status_code == 200
 
-    complete_job = handle_one_job(gpu_type="Any", cpu_cores=1, memory_gb=1)
+    complete_job = handle_one_job(
+        gpu_type="Any", cpu_cores=1, memory_gb=1, dc="us-east-1", region="az1"
+    )
     assert complete_job.image == "busybox:1.37"
 
 
@@ -212,7 +236,9 @@ def test_executor_respects_the_exit_code_of_the_job():
         "cpu_cores_requested": 1,
     }
     assert client.post("/jobs", json=job_data).status_code == 200
-    complete_job = handle_one_job(gpu_type="Any", cpu_cores=1, memory_gb=1)
+    complete_job = handle_one_job(
+        gpu_type="Any", cpu_cores=1, memory_gb=1, dc="us-east-1", region="az1"
+    )
     assert complete_job.status == "succeeded"
 
     # this job will fail
@@ -224,7 +250,9 @@ def test_executor_respects_the_exit_code_of_the_job():
         "cpu_cores_requested": 1,
     }
     assert client.post("/jobs", json=job_data).status_code == 200
-    complete_job = handle_one_job(gpu_type="Any", cpu_cores=1, memory_gb=1)
+    complete_job = handle_one_job(
+        gpu_type="Any", cpu_cores=1, memory_gb=1, dc="us-east-1", region="az1"
+    )
     assert complete_job.status == "failed"
 
     # this job will definitely fail
@@ -236,7 +264,9 @@ def test_executor_respects_the_exit_code_of_the_job():
         "cpu_cores_requested": 1,
     }
     assert client.post("/jobs", json=job_data).status_code == 200
-    complete_job = handle_one_job(gpu_type="Any", cpu_cores=1, memory_gb=1)
+    complete_job = handle_one_job(
+        gpu_type="Any", cpu_cores=1, memory_gb=1, dc="us-east-1", region="az1"
+    )
     assert complete_job.status == "failed"
 
 
@@ -252,7 +282,7 @@ def test_long_running_job_status():
     assert response.status_code == 200
 
     # using asyncio for this might be more fun
-    temp_thread = threading.Thread(target=handle_one_job, args=("Any", 1, 1))
+    temp_thread = threading.Thread(target=handle_one_job, args=("Any", 1, 1, "us-east-1", "az1"))
     temp_thread.start()
 
     assert Job.load(response.json()["id"]).status == "running"
@@ -265,8 +295,12 @@ def test_executor_startup_configuration(monkeypatch):
     monkeypatch.setenv("EXECUTOR_GPU_TYPE", "NVIDIA")
     monkeypatch.setenv("EXECUTOR_CPU_CORES", "1")
     monkeypatch.setenv("EXECUTOR_MEMORY_GB", "1")
+    monkeypatch.setenv("EXECUTOR_DATA_CENTER", "us-east-1")
+    monkeypatch.setenv("EXECUTOR_REGION", "az1")
 
     with patch("app.executor.listen_for_work") as mock_listen:  # noqa: F841
         start_worker()
 
-    mock_listen.assert_called_once_with(gpu_type="NVIDIA", cpu_cores=1, memory_gb=1)
+    mock_listen.assert_called_once_with(
+        gpu_type="NVIDIA", cpu_cores=1, memory_gb=1, dc="us-east-1", region="az1"
+    )

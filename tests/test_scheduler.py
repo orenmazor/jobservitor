@@ -134,7 +134,9 @@ def test_abort_succeeded_job():
     response = client.post("/jobs", json=job_data)
     assert response.status_code == 200
 
-    complete_job = handle_one_job(gpu_type="Any", cpu_cores=1, memory_gb=1)
+    complete_job = handle_one_job(
+        gpu_type="Any", cpu_cores=1, memory_gb=1, dc="us-east-1", region="az1"
+    )
     assert complete_job.status == "succeeded"
 
     abort_response = client.delete(f"/jobs/{response.json()["id"]}")
@@ -173,7 +175,9 @@ def test_abort_running_job():
     assert response.status_code == 200
 
     # using asyncio for this might be more fun
-    temp_thread = threading.Thread(target=handle_one_job, args=("Any", 1, 1))
+    temp_thread = threading.Thread(
+        target=handle_one_job, args=("Any", 1, 1, "us-east-1", "az1")
+    )
     temp_thread.start()
 
     # rest our weary roboheads for a moment
