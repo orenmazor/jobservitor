@@ -9,6 +9,7 @@ dependencies = [
     "docker>=7.1.0",
     "fastapi[standard]>=0.118.0",
     "pdbpp>=0.11.7",
+    "psutil>=7.1.2",
     "pydantic>=2.11.9",
     "pytest>=8.4.2",
     "pytest-cov>=7.0.0",

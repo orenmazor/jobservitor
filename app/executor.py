@@ -6,11 +6,12 @@ from typing import Optional, Literal
 import docker
 from app.persistence import dequeue_job
 from time import sleep
-from os import environ
+from os import cpu_count, environ
 from sys import exit
 from app.models import Job
 from datetime import datetime
 from socket import gethostname, gethostbyname
+import psutil
 
 idle_time = environ.get("EXECUTOR_IDLE_TIME", 1)
 blocking_time = environ.get("EXECUTOR_BLOCKING_TIME", 1)
@@ -114,10 +115,15 @@ def start_worker():
     and begin listening for work.
     """
 
-    # TODO: add discovery of these things, rather than relying on env input
+    # gpu detection is probably done with something like pytorch
+    # which doesnt install nicely on M4 macs
     gpu_type = environ.get("EXECUTOR_GPU_TYPE", "Any")
-    cpu_cores = int(environ.get("EXECUTOR_CPU_CORES", 1))
-    memory_gb = int(environ.get("EXECUTOR_MEMORY_GB", 1))
+    cpu_cores = int(environ.get("EXECUTOR_CPU_CORES", cpu_count()))
+    memory_gb = int(
+        environ.get(
+            "EXECUTOR_MEMORY_GB", int(psutil.virtual_memory().total / (1024**3))
+        )
+    )
 
     listen_for_work(gpu_type=gpu_type, cpu_cores=cpu_cores, memory_gb=memory_gb)
 
