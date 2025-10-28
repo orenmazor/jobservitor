@@ -109,10 +109,18 @@ def listen_for_work(
         sleep(idle_time)
 
 
-if __name__ == "__main__":
+def start_worker():
+    """The entry point for the worker to configure itself
+    and begin listening for work.
+    """
+
     # TODO: add discovery of these things, rather than relying on env input
-    gpu_type = environ.get("EXECUTOR_GPU_TYPE", None)
+    gpu_type = environ.get("EXECUTOR_GPU_TYPE", "Any")
     cpu_cores = int(environ.get("EXECUTOR_CPU_CORES", 1))
     memory_gb = int(environ.get("EXECUTOR_MEMORY_GB", 1))
 
-    listen_for_work(gpu_type, cpu_cores, memory_gb)
+    listen_for_work(gpu_type=gpu_type, cpu_cores=cpu_cores, memory_gb=memory_gb)
+
+
+if __name__ == "__main__":
+    start_worker()

@@ -1,8 +1,10 @@
+from unittest.mock import patch
+
 from fastapi.testclient import TestClient
 import threading
 
-from app.executor import handle_one_job
-
+# TODO: clean up these adhoc imports
+from app.executor import handle_one_job, start_worker
 from app.scheduler import app
 from app.models import Job, redis_client
 
@@ -257,3 +259,14 @@ def test_long_running_job_status():
 
     temp_thread.join()
     assert Job.load(response.json()["id"]).status == "succeeded"
+
+
+def test_executor_startup_configuration(monkeypatch):
+    monkeypatch.setenv("EXECUTOR_GPU_TYPE", "NVIDIA")
+    monkeypatch.setenv("EXECUTOR_CPU_CORES", "1")
+    monkeypatch.setenv("EXECUTOR_MEMORY_GB", "1")
+
+    with patch("app.executor.listen_for_work") as mock_listen:  # noqa: F841
+        start_worker()
+
+    mock_listen.assert_called_once_with(gpu_type="NVIDIA", cpu_cores=1, memory_gb=1)
