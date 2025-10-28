@@ -26,11 +26,15 @@ def load_job(job_id) -> str | None:
     return redis_client.get(PROJECT_PREFIX + job_id)
 
 
+def queue_name(gpu_type: Literal["NVIDIA", "AMD", "Intel", "Any"] = "Any") -> str:
+    return f"{QUEUE_PREFIX}{gpu_type}"
+
+
 def enqueue_job(job) -> bool:
     # score by submission timestamp so we can FIFO as much as possible
     score = job.submitted_at.timestamp()
 
-    return redis_client.zadd(QUEUE_PREFIX + job.gpu_type, {job.id: score})
+    return redis_client.zadd(queue_name(job.gpu_type), {job.id: score})
 
 
 def dequeue_job(
@@ -66,7 +70,7 @@ def dequeue_job(
     # queued_work = redis_client.bzpopmin(QUEUE_PREFIX + gpu_type, timeout=blocking_time)
 
     # so switch to zpopmin which can pop multiple items
-    possible_jobs = redis_client.zpopmin(QUEUE_PREFIX + gpu_type, count=10)
+    possible_jobs = redis_client.zpopmin(queue_name(gpu_type), count=10)
     if not possible_jobs:
         # we found none, so return none and let the caller try again
         return None

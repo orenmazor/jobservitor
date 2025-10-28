@@ -7,6 +7,7 @@ import threading
 from app.executor import handle_one_job, start_worker
 from app.scheduler import app
 from app.models import Job, redis_client
+from app.persistence import queue_name
 
 from time import sleep
 
@@ -35,9 +36,7 @@ def test_job_found():
     assert response.status_code == 200
 
     # queue should have a job
-    assert redis_client.zrange("jobservitor:queue:NVIDIA", 0, -1) == [
-        response.json()["id"]
-    ]
+    assert redis_client.zrange(queue_name("NVIDIA"), 0, -1) == [response.json()["id"]]
 
     assert (
         handle_one_job(
@@ -47,7 +46,7 @@ def test_job_found():
     )
 
     # queue should be empty now
-    assert redis_client.zrange("jobservitor:queue:NVIDIA", 0, -1) == []
+    assert redis_client.zrange(queue_name("NVIDIA"), 0, -1) == []
 
 
 def test_executor_ignores_architecture_that_doesnt_belong_to_it():
@@ -63,9 +62,7 @@ def test_executor_ignores_architecture_that_doesnt_belong_to_it():
     assert response.status_code == 200
 
     # queue should have a job
-    assert redis_client.zrange("jobservitor:queue:NVIDIA", 0, -1) == [
-        response.json()["id"]
-    ]
+    assert redis_client.zrange(queue_name("NVIDIA"), 0, -1) == [response.json()["id"]]
 
     assert (
         handle_one_job(
@@ -75,9 +72,7 @@ def test_executor_ignores_architecture_that_doesnt_belong_to_it():
     )
 
     # queue should still have the job
-    assert redis_client.zrange("jobservitor:queue:NVIDIA", 0, -1) == [
-        response.json()["id"]
-    ]
+    assert redis_client.zrange(queue_name("NVIDIA"), 0, -1) == [response.json()["id"]]
 
 
 def test_executor_checks_the_any_queue_after_checking_its_own_arch():
@@ -92,9 +87,7 @@ def test_executor_checks_the_any_queue_after_checking_its_own_arch():
     assert response.status_code == 200
 
     # this job went to the Any queue
-    assert redis_client.zrange("jobservitor:queue:Any", 0, -1) == [
-        response.json()["id"]
-    ]
+    assert redis_client.zrange(queue_name(), 0, -1) == [response.json()["id"]]
 
     assert (
         handle_one_job(
@@ -104,7 +97,7 @@ def test_executor_checks_the_any_queue_after_checking_its_own_arch():
     )
 
     # queue should be empty
-    assert redis_client.zrange("jobservitor:queue:Any", 0, -1) == []
+    assert redis_client.zrange(queue_name(), 0, -1) == []
 
 
 def test_executor_completes_a_job_and_correctly_updates_it():
@@ -134,7 +127,7 @@ def test_executor_completes_a_job_and_correctly_updates_it():
     assert complete_job.worker == "executor-1-127.0.0.1"
 
     # queue should be empty
-    assert redis_client.zrange("jobservitor:queue:Any", 0, -1) == []
+    assert redis_client.zrange(queue_name(), 0, -1) == []
 
 
 def test_executor_pulls_two_jobs_in_sequence():
@@ -282,7 +275,9 @@ def test_long_running_job_status():
     assert response.status_code == 200
 
     # using asyncio for this might be more fun
-    temp_thread = threading.Thread(target=handle_one_job, args=("Any", 1, 1, "us-east-1", "az1"))
+    temp_thread = threading.Thread(
+        target=handle_one_job, args=("Any", 1, 1, "us-east-1", "az1")
+    )
     temp_thread.start()
 
     assert Job.load(response.json()["id"]).status == "running"
